@@ -1,5 +1,5 @@
 from user_simulator import UserSimulator
-from error_model_controller import ErrorModelController
+from user_error_controller import UserErrorController
 from dqn_agent import DQNAgent
 from state_tracker import StateTracker
 import pickle, argparse, json, math
@@ -60,7 +60,7 @@ if __name__ == "__main__":
         user = UserSimulator(user_goals, constants, database)
     else:
         user = User(constants)
-    emc = ErrorModelController(db_dict, constants)
+    emc = UserErrorController(db_dict, constants)
     state_tracker = StateTracker(database, constants)
     dqn_agent = DQNAgent(state_tracker.get_state_size(), constants)
 
