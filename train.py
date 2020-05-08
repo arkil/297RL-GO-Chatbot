@@ -74,7 +74,7 @@ def run_round(state, warmup=False):
     user_action, reward, done, success = user.step(agent_action)
     if not done:
         # 4) Infuse error into semantic frame level of user action
-        emc.infuse_error(user_action)
+        emc.add_user_action_error(user_action)
     # 5) Update state tracker with user action
     state_tracker.update_state_user(user_action)
     # 6) Get next state and add experience
@@ -172,7 +172,7 @@ def episode_reset():
     # Then pick an init user action
     user_action = user.reset()
     # Infuse with error
-    emc.infuse_error(user_action)
+    emc.add_user_action_error(user_action)
     # And update state tracker
     state_tracker.update_state_user(user_action)
     # Finally, reset agent
