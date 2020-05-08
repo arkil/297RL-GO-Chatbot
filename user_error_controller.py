@@ -29,7 +29,7 @@ class UserErrorController:
         dict_inform[key] = random.choice(self.dict_movie[key])
 
         
-    def add_semantic_acion_error(self, action):
+    def add_user_action_error(self, action):
 
         dict_inform = action['inform_slots']
         action_keys = [key for key in action['inform_slots'].keys()]
