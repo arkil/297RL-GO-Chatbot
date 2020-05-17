@@ -1,8 +1,8 @@
 {
   "db_file_paths": {
-    "database": "data/movie_db.pkl",
-    "dict": "data/movie_dict.pkl",
-    "user_goals": "data/movie_user_goals.pkl"
+    "database": "../data/movie_db.pkl",
+    "dict": "../data/movie_dict.pkl",
+    "user_goals": "../data/movie_user_goals.pkl"
   },
   "run": {
     "usersim": true,
