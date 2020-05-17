@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
 def run_round(state, warmup=False):
     # 1) Agent takes action given state tracker's representation of dialogue (state)
-    agent_action = actor_critic.act(state)
+    agent_action = ac_agent.act(state)
     # 2) Update state tracker with the agent's action
     state_tracker.update_state_agent(agent_action)
     # 3) User takes action given agent action
@@ -106,7 +106,7 @@ def warmup_run():
 
     print('Warmup Started...')
     total_step = 0
-    while total_step != WARMUP_MEM and not sarsa_agent.is_memory_full():
+    while total_step != WARMUP_MEM and not ac_agent.is_memory_full():
         # Reset episode
         episode_reset()
         done = False

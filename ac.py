@@ -4,15 +4,13 @@ from keras.layers import Dense, Dropout, Input
 from keras.layers.merge import Add, Multiply
 from keras.optimizers import Adam
 import keras.backend as K
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import random
 from collections import deque
 from dialogue_config import rule_requests, agent_actions
 import re
 
-
-# determines how to assign values to each state, i.e. takes the state
-# and action (two-input model) and determines the corresponding value
 class ActorCritic:
 	def __init__(self,state_size, constants, sess):
 		self.sess = sess
@@ -39,50 +37,46 @@ class ActorCritic:
 		self.rule_request_set = rule_requests
 		self.reset()
 
-		# ===================================================================== #
-		#                               Actor Model                             #
-		# Chain rule: find the gradient of chaging the actor network params in  #
-		# getting closest to the final value network predictions, i.e. de/dA    #
-		# Calculate de/dA as = de/dC * dC/dA, where e is error, C critic, A act #
-		# ===================================================================== #
-
 		self.memory = deque(maxlen=2000)
 		self.actor_state_input, self.actor_model = self.create_actor_model()
 		_, self.target_actor_model = self.create_actor_model()
 
 		self.actor_critic_grad = tf.placeholder(tf.float32, 
-			[None, self.user.self.possible_actions.shape[0]]) # where we will feed de/dC (from critic)
-		
+			[None, self.num_actions]) 
+
 		actor_model_weights = self.actor_model.trainable_weights
 		self.actor_grads = tf.gradients(self.actor_model.output, 
-			actor_model_weights, -self.actor_critic_grad) # dC/dA (from actor)
+			actor_model_weights, -self.actor_critic_grad) 
 		grads = zip(self.actor_grads, actor_model_weights)
 		self.optimize = tf.train.AdamOptimizer(self.learning_rate).apply_gradients(grads)
-
-		# ===================================================================== #
-		#                              Critic Model                             #
-		# ===================================================================== #		
 
 		self.critic_state_input, self.critic_action_input, \
 			self.critic_model = self.create_critic_model()
 		_, _, self.target_critic_model = self.create_critic_model()
 
 		self.critic_grads = tf.gradients(self.critic_model.output, 
-			self.critic_action_input) # where we calcaulte de/dC for feeding above
-		
-		# Initialize for later gradient calculations
+			self.critic_action_input) 
 		self.sess.run(tf.initialize_all_variables())
 
-	# ========================================================================= #
-	#                              Model Definitions                            #
-	# ========================================================================= #
+	def map_index_to_action(self, index):
+		for (i, action) in enumerate(self.possible_actions):
+			if index == i:
+				return copy.deepcopy(action)
+			raise ValueError('Index: {} not in range of possible actions'.format(index))
+
+	def empty_memory(self):
+		self.memory = []
+		self.index_memory = 0
+
+	def is_memory_full(self):
+		return len(self.memory) == self.max_memory_size
 
 	def create_actor_model(self):
-		state_input = Input(shape=self.user.observation_space.shape)
-		h1 = Dense(24, activation='relu')(state_input)
+		state_input = Input(shape=(self.batch_size, self.state_size))
+		h1 = Dense(self.hidden_units, activation='relu')(state_input)
 		h2 = Dense(48, activation='relu')(h1)
 		h3 = Dense(24, activation='relu')(h2)
-		output = Dense(self.user.action_space.shape[0], activation='relu')(h3)
+		output = Dense(self.num_actions, activation='relu')(h1)
 		
 		model = Model(input=state_input, output=output)
 		adam  = Adam(lr=0.001)
@@ -90,11 +84,11 @@ class ActorCritic:
 		return state_input, model
 
 	def create_critic_model(self):
-		state_input = Input(shape=self.user.observation_space.shape)
+		state_input = Input(shape=state_size)
 		state_h1 = Dense(24, activation='relu')(state_input)
 		state_h2 = Dense(48)(state_h1)
 		
-		action_input = Input(shape=self.user.action_space.shape)
+		action_input = Input(shape=num_actions)
 		action_h1    = Dense(48)(action_input)
 		
 		merged    = Add()([state_h2, action_h1])
@@ -105,10 +99,6 @@ class ActorCritic:
 		adam  = Adam(lr=0.001)
 		model.compile(loss="mse", optimizer=adam)
 		return state_input, action_input, model
-
-	# ========================================================================= #
-	#                               Model Training                              #
-	# ========================================================================= #
 
 	def remember(self, cur_state, action, reward, new_state, done):
 		self.memory.append([cur_state, action, reward, new_state, done])
@@ -147,9 +137,6 @@ class ActorCritic:
 		self._train_critic(samples)
 		self._train_actor(samples)
 
-	# ========================================================================= #
-	#                         Target Model Updating                             #
-	# ========================================================================= #
 
 	def _update_actor_target(self):
 		actor_model_weights  = self.actor_model.get_weights()
@@ -171,20 +158,20 @@ class ActorCritic:
 		self._update_actor_target()
 		self._update_critic_target()
 
-	# ========================================================================= #
-	#                              Model Predictions                            #
-	# ========================================================================= #
 
 	def act(self, cur_state):
-		self.epsilon *= self.epsilon_decay
-		if np.random.random() < self.epsilon:
-			return self.user.action_space.sample()
+		self.init_epsilon *= self.epsilon_decay
+		if np.random.random() < self.init_epsilon:
+			index = random.randint(0, self.num_actions - 1)
+			action = self.map_index_to_action()
+
+			return index
 		return self.actor_model.predict(cur_state)
 
 	def reset(self):
-		"""Resets the rule-based variables."""
 		self.rule_current_slot_index = 0
 		self.rule_phase = 'not done'
+
 
 
 
